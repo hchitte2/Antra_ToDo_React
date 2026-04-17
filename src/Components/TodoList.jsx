@@ -1,75 +1,91 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { todos as initialTodos } from "../Data/todo";
 
+const initialState = {
+  todos: initialTodos,
+  inputValue: "",
+  filter: "all",
+};
+
+function todoReducer(state, action) {
+  switch (action.type) {
+    case "SET_INPUT":
+      return { ...state, inputValue: action.payload };
+    case "ADD_TODO":
+      if (!state.inputValue.trim()) return state;
+      return {
+        ...state,
+        todos: [
+          ...state.todos,
+          {
+            id: state.todos.length + 1,
+            todo: state.inputValue,
+            completed: false,
+            userId: 0,
+          },
+        ],
+        inputValue: "",
+      };
+    case "TOGGLE_TODO":
+      return {
+        ...state,
+        todos: state.todos.map((todo) =>
+          todo.id === action.payload ? { ...todo, completed: !todo.completed } : todo
+        ),
+      };
+    case "DELETE_TODO":
+      return {
+        ...state,
+        todos: state.todos.filter((todo) => todo.id !== action.payload),
+      };
+    case "SET_FILTER":
+      return { ...state, filter: action.payload };
+    default:
+      return state;
+  }
+}
+
 const TodoList = () => {
-  const [todos, setTodos] = useState(initialTodos);
-  const [inputValue, setInputValue] = useState("");
-  const [filter, setFilter] = useState("all");
-
-  const handleOnChange = (e) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleAddTodo = () => {
-    if (!inputValue.trim()) return;
-
-    setTodos([
-      ...todos,
-      {
-        id: todos.length + 1,
-        todo: inputValue,
-        completed: false,
-        userId: 0,
-      },
-    ]);
-
-    setInputValue("");
-  };
-
-  const handleToggle = (id) => {
-    setTodos(todos.map((todo) =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
-  };
-
-  const handleDelete = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  };
+  const [state, dispatch] = useReducer(todoReducer, initialState);
+  const { todos, inputValue, filter } = state;
 
   const visibleTodos = todos.filter((todo) => {
     if (filter === "active") return !todo.completed;
     if (filter === "completed") return todo.completed;
-    return true; // "all"
+    return true;
   });
 
   return (
     <div>
-      <input value={inputValue} onChange={handleOnChange} />
-      <button onClick={handleAddTodo}>add todo</button>
+      <input
+        value={inputValue}
+        onChange={(e) => dispatch({ type: "SET_INPUT", payload: e.target.value })}
+      />
+      <button onClick={() => dispatch({ type: "ADD_TODO" })}>add todo</button>
 
       <div style={{ marginTop: "10px", marginBottom: "10px" }}>
-        <button onClick={() => setFilter("all")}>All</button>
-        <button onClick={() => setFilter("active")}>Active</button>
-        <button onClick={() => setFilter("completed")}>Completed</button>
+        <button onClick={() => dispatch({ type: "SET_FILTER", payload: "all" })}>All</button>
+        <button onClick={() => dispatch({ type: "SET_FILTER", payload: "active" })}>Active</button>
+        <button onClick={() => dispatch({ type: "SET_FILTER", payload: "completed" })}>Completed</button>
       </div>
 
       <ul>
         {visibleTodos.map((todo) => (
-          <li 
+          <li
             key={todo.id}
-            onClick={() => handleToggle(todo.id)}
-            style={{ 
+            onClick={() => dispatch({ type: "TOGGLE_TODO", payload: todo.id })}
+            style={{
               textDecoration: todo.completed ? "line-through" : "none",
               cursor: "pointer",
               padding: "5px",
-              marginBottom: "5px"
+              marginBottom: "5px",
             }}
           >
             {todo.todo}
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete(todo.id);
+                dispatch({ type: "DELETE_TODO", payload: todo.id });
               }}
               style={{ marginLeft: "10px", cursor: "pointer" }}
             >
